@@ -1,0 +1,81 @@
+# Product Requirements Document (PRD)
+
+> Status: DRAFT
+> Phase: PM
+> Last updated: 2026-09-20
+
+---
+
+## Problem Statement
+
+Autonomous agents and Non-Human Identities (NHIs) — including AI agents, bots, service accounts, and automated pipelines — are proliferating across enterprise environments. Unlike human users, they operate at machine speed, across multiple systems simultaneously, and often with broad permissions. Yet enterprises lack a unified system to govern them.
+
+The core problem: **there is no standard system that governs how autonomous agents and NHIs authenticate, access enterprise systems and data, and execute actions** — with the controls, visibility, and accountability that enterprises require.
+
+This creates four specific gaps:
+
+1. **No runtime authorization** — Agents operate with static, pre-granted permissions rather than dynamic, context-aware authorization at the moment of action.
+2. **No pre-execution policy controls** — There is no enforcement layer that evaluates whether an agent *should* take an action before it executes, based on policy, context, and risk.
+3. **No behavioral anomaly detection** — Deviations from expected agent behavior (unusual access patterns, unexpected tool calls, privilege escalation) go undetected until damage is done.
+4. **No tamper-evident auditability** — Agent actions are either unlogged or logged in ways that can be altered, making forensic investigation and compliance reporting unreliable.
+
+---
+
+## Target Users
+
+| User | Context |
+|---|---|
+| **Security Engineers** | Responsible for securing AI systems; need tools to detect and remediate agent vulnerabilities |
+| **AI/ML Developers** | Building agent systems; need security guardrails that integrate naturally into their workflow |
+| **Product / Platform Teams** | Deploying AI-powered products; need compliance, safety, and auditability built in |
+| **DevSecOps / CI Teams** | Running automated pipelines; need security checks that run automatically at every stage |
+
+---
+
+## Goals
+
+1. **Govern agent identity** — Provide a standard way for autonomous agents and NHIs to authenticate to enterprise systems with verifiable, scoped identities.
+2. **Enforce runtime authorization** — Make every agent action subject to dynamic, context-aware authorization at the moment of execution — not just at provisioning time.
+3. **Apply pre-execution policy controls** — Evaluate agent intent against policy before any action is carried out, and block or escalate when policy is violated.
+4. **Detect behavioral anomalies** — Continuously monitor agent behavior and surface deviations that indicate compromise, misconfiguration, or misuse.
+5. **Guarantee tamper-evident auditability** — Produce cryptographically verifiable, immutable logs of every agent action for forensics, compliance, and accountability.
+
+---
+
+## Scope
+
+### In Scope
+- Agent and NHI identity and authentication (short-lived credentials, identity federation, workload identity)
+- Runtime authorization engine (policy evaluation at point of action, not just at provisioning)
+- Pre-execution policy controls (intent analysis, risk scoring, action blocking / human-in-the-loop escalation)
+- Behavioral anomaly detection (baseline modeling, drift detection, alerting)
+- Tamper-evident audit logging (append-only, cryptographically signed action logs)
+- Integration with enterprise identity systems (IAM, OIDC, SAML, secrets managers)
+- Support for major AI agent frameworks (LangChain, AutoGen, CrewAI, Claude SDK, OpenAI Agents)
+
+### Out of Scope
+- Building or hosting AI agents (this governs agents, it does not build them)
+- General-purpose SIEM or observability platform
+- Non-agent/NHI identity management (human IAM is covered by existing enterprise tools)
+
+---
+
+## Success Metrics
+
+| Metric | Target |
+|---|---|
+| Vulnerability detection rate | Catches >90% of known agent attack vectors in test suite |
+| Developer adoption friction | Runnable with a single command, zero config required for basic scan |
+| CI integration | Integrates with GitHub Actions, GitLab CI in <30 min |
+| Audit coverage | Generates complete audit trail for every agent action scanned |
+| Community traction | 500+ GitHub stars within 6 months of launch |
+
+---
+
+## Open Questions
+
+- [ ] Which AI agent frameworks should be supported first? (LangChain, AutoGen, CrewAI, Claude SDK, OpenAI Agents?)
+- [ ] Should access control be policy-as-code (e.g. OPA/Rego) or a simpler config file format?
+- [ ] What is the recommended form factor — CLI, Python SDK, or both? (Deferred to architecture phase)
+- [ ] Are there compliance frameworks (SOC2, OWASP LLM Top 10) we should explicitly map findings to?
+- [ ] What is the licensing model — open source, commercial, or dual?
