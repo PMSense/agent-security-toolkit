@@ -74,8 +74,14 @@ This creates four specific gaps:
 
 ## Open Questions
 
-- [ ] Which AI agent frameworks should be supported first? (LangChain, AutoGen, CrewAI, Claude SDK, OpenAI Agents?)
-- [ ] Should access control be policy-as-code (e.g. OPA/Rego) or a simpler config file format?
-- [ ] What is the recommended form factor — CLI, Python SDK, or both? (Deferred to architecture phase)
+- [x] **Which AI agent frameworks should be supported first?**
+  **Decision:** Launch with **LangChain** and **OpenAI Agents SDK** — they cover the largest share of enterprise agent deployments today. The system will be built around a clean adapter interface so remaining frameworks can be added in v2 without redesigning the core.
+  **v2 backlog:** AutoGen, Claude SDK, CrewAI (in that order — AutoGen has strong Microsoft/enterprise backing; Claude SDK is growing with Anthropic enterprise adoption; CrewAI has smaller enterprise footprint today).
+
+- [x] **Should access control be policy-as-code (e.g. OPA/Rego) or a simpler config file format?**
+  **Decision:** Ship v1 with a **simple YAML/JSON config format**. Design the schema to map cleanly to Rego so a transpiler (config → Rego) can be added in v2 without breaking existing policies. OPA/Rego becomes the advanced policy layer in v2 once the schema is proven in production.
+- [x] **What is the recommended form factor — CLI, Python SDK, or both?**
+  **Decision:** Ship v1 with a **Python SDK** as the core (required for runtime authorization, pre-execution policy enforcement, and behavioral monitoring). Follow with a **CLI** as a thin wrapper over the same library for policy management, audit querying, and CI/CD integration. The CLI is ~1 additional week of effort and serves security engineers and DevSecOps who won't embed Python.
 - [ ] Are there compliance frameworks (SOC2, OWASP LLM Top 10) we should explicitly map findings to?
-- [ ] What is the licensing model — open source, commercial, or dual?
+- [x] **What is the licensing model — open source, commercial, or dual?**
+  **Decision:** **Dual licensing (Open Core).** Core SDK and CLI are open source (Apache 2.0) — free to use, self-host, and contribute to. Enterprise tier is commercial — adds managed hosting, centralized audit logging with compliance export, advanced policy controls, all framework adapters, and SLA-backed support. Open core drives developer adoption and creates the top-of-funnel pipeline for enterprise deals.
