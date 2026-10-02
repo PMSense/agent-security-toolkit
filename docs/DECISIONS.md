@@ -42,6 +42,16 @@
 
 ---
 
+## ADR-005: Short-Lived Agent Identity — JWT Baseline + Federation Layer
+
+- **Date:** 2026-10-02
+- **Status:** Accepted
+- **Context:** Three mechanisms were evaluated for short-lived agent/NHI identity: JWT via OAuth 2.0 Client Credentials (universal, low complexity, developer-friendly), SPIFFE/SPIRE SVIDs (purpose-built for NHI, auto-rotating, higher infrastructure cost), and Cloud Workload Identity (AWS/GCP/Azure — cloud-native, zero secrets, but environment-specific). No single mechanism covers all deployment scenarios.
+- **Decision:** **Two-tier approach.** JWT via OAuth 2.0 Client Credentials is the universal baseline — SDK issues JWTs by default, works in any environment, TTL configurable (default 15 min, RS256/ES256 signed). SPIFFE/SPIRE SVIDs and Cloud Workload Identity tokens (AWS IAM, GCP Workload Identity, Azure Managed Identity) are accepted as federation sources via OIDC token exchange — the system validates the external token and issues a scoped system JWT in return. No long-lived secrets stored anywhere in the federation path.
+- **Consequences:** Developers get started immediately with JWT; enterprises with existing SPIRE or cloud IAM infrastructure need no new credential stores. Agent is responsible for refreshing JWTs before expiry (no auto-rotation in the baseline tier — SPIFFE handles auto-rotation natively in the federation path). JWT claim schema must be stable — breaking changes require a versioned migration.
+
+---
+
 ## Template
 ### ADR-XXX: [Decision Title]
 - **Date:** YYYY-MM-DD

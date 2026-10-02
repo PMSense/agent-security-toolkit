@@ -2,7 +2,7 @@
 
 > Status: DRAFT
 > Phase: PM
-> Last updated: 2026-09-20
+> Last updated: 2026-09-27
 
 ---
 
@@ -39,6 +39,7 @@ This creates four specific gaps:
 3. **Apply pre-execution policy controls** — Evaluate agent intent against policy before any action is carried out, and block or escalate when policy is violated.
 4. **Detect behavioral anomalies** — Continuously monitor agent behavior and surface deviations that indicate compromise, misconfiguration, or misuse.
 5. **Guarantee tamper-evident auditability** — Produce cryptographically verifiable, immutable logs of every agent action for forensics, compliance, and accountability.
+6. **Map to industry compliance frameworks** — Tag findings and audit exports against OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF so enterprises can demonstrate governance posture without manual mapping.
 
 ---
 
@@ -51,7 +52,8 @@ This creates four specific gaps:
 - Behavioral anomaly detection (baseline modeling, drift detection, alerting)
 - Tamper-evident audit logging (append-only, cryptographically signed action logs)
 - Integration with enterprise identity systems (IAM, OIDC, SAML, secrets managers)
-- Support for major AI agent frameworks (LangChain, AutoGen, CrewAI, Claude SDK, OpenAI Agents)
+- Support for **LangChain** and **OpenAI Agents SDK** (v1); AutoGen, Claude SDK, CrewAI via adapter pattern in v2
+- Compliance mapping to OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF
 
 ### Out of Scope
 - Building or hosting AI agents (this governs agents, it does not build them)
@@ -82,6 +84,7 @@ This creates four specific gaps:
   **Decision:** Ship v1 with a **simple YAML/JSON config format**. Design the schema to map cleanly to Rego so a transpiler (config → Rego) can be added in v2 without breaking existing policies. OPA/Rego becomes the advanced policy layer in v2 once the schema is proven in production.
 - [x] **What is the recommended form factor — CLI, Python SDK, or both?**
   **Decision:** Ship v1 with a **Python SDK** as the core (required for runtime authorization, pre-execution policy enforcement, and behavioral monitoring). Follow with a **CLI** as a thin wrapper over the same library for policy management, audit querying, and CI/CD integration. The CLI is ~1 additional week of effort and serves security engineers and DevSecOps who won't embed Python.
-- [ ] Are there compliance frameworks (SOC2, OWASP LLM Top 10) we should explicitly map findings to?
+- [x] **Are there compliance frameworks (SOC2, OWASP LLM Top 10) we should explicitly map findings to?**
+  **Decision:** Map v1 findings and audit exports to **OWASP LLM Top 10**, **MITRE ATLAS**, and **NIST AI RMF** — the three most technically relevant frameworks for this system. SOC 2 and ISO 27001 are deferred to the enterprise tier (v2). 10 specific technical controls (CR-1 through CR-10) derived from these frameworks have been added to REQUIREMENTS.md.
 - [x] **What is the licensing model — open source, commercial, or dual?**
   **Decision:** **Dual licensing (Open Core).** Core SDK and CLI are open source (Apache 2.0) — free to use, self-host, and contribute to. Enterprise tier is commercial — adds managed hosting, centralized audit logging with compliance export, advanced policy controls, all framework adapters, and SLA-backed support. Open core drives developer adoption and creates the top-of-funnel pipeline for enterprise deals.

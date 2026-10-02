@@ -3,7 +3,7 @@
 > Status: DRAFT
 > Phase: BA
 > Input: docs/PRD.md
-> Last updated: 2026-09-21
+> Last updated: 2026-09-27
 
 ---
 
@@ -14,17 +14,21 @@
 **FR-1.1 — Identity Registration**
 - Given an autonomous agent or NHI is being onboarded,
 - When an administrator registers it in the system,
-- Then the system issues a scoped, verifiable identity (e.g. workload identity token or short-lived credential) bound to that agent's declared purpose and permissions.
+- Then the system issues a scoped, cryptographically signed **JWT** (via OAuth 2.0 Client Credentials grant) bound to that agent's declared purpose, permissions, and expiry — usable as the universal baseline identity across any environment.
 
 **FR-1.2 — Short-Lived Credentials**
 - Given an agent has a registered identity,
 - When it requests access to an enterprise resource,
-- Then the system issues a short-lived credential (TTL-bound) rather than a static long-lived secret, and rotates it automatically upon expiry.
+- Then the system issues a short-lived JWT (configurable TTL, default 15 minutes) rather than a static long-lived secret; the agent is responsible for requesting a new token before expiry using its client credentials.
 
 **FR-1.3 — Identity Federation**
-- Given an enterprise uses an existing IAM provider (OIDC, SAML, cloud IAM),
-- When an agent authenticates,
-- Then the system federates with the enterprise identity provider and does not require a separate credential store.
+- Given an enterprise uses an existing workload identity system,
+- When an agent authenticates using any of the following:
+  - **SPIFFE/SPIRE SVID** (X.509 or JWT-SVID)
+  - **Cloud Workload Identity** — AWS IAM role token, GCP Workload Identity token, Azure Managed Identity token
+  - **SAML 2.0** — via enterprise IdP (Okta, ADFS) that bridges SAML to an OIDC endpoint; the system accepts the resulting OIDC token, not raw SAML assertions
+  - **HashiCorp Vault** — via Vault AppRole auth or a Vault-issued OIDC token from Vault's identity engine
+- Then the system accepts the external token via OIDC token exchange and issues a scoped system JWT in return — no additional secrets or credential stores required.
 
 **FR-1.4 — Identity Revocation**
 - Given an agent identity is compromised or decommissioned,
@@ -140,7 +144,92 @@
 **FR-5.5 — Compliance Export**
 - Given an organization requires compliance reporting,
 - When they export the audit log,
-- Then the system produces a report mapped to standard frameworks (OWASP LLM Top 10, SOC 2, ISO 27001) in CSV and JSON formats.
+- Then the system produces a report with findings tagged by OWASP LLM Top 10 category, MITRE ATLAS technique ID, and NIST AI RMF function, exported in CSV and JSON formats.
+
+---
+
+## Compliance Requirements
+
+> Technically feasible controls derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF.
+> Non-technical, organizational, and process requirements from these frameworks are out of MVP scope.
+
+### CR-1: Verifiable, Scoped Identity Tokens
+- Given an agent is registered and issued a JWT identity token,
+- When the token is presented to a resource or evaluated by the authorization engine,
+- Then it must be verifiable offline using the issuer's public key (RS256 or ES256), contain claims for: agent ID, declared scope, purpose, issuing system, and expiry — and must be rejected if any claim is missing or the signature is invalid.
+- **Maps to:** MITRE ATLAS: Initial Access · NIST AI RMF: GOVERN
+
+---
+
+### CR-2: Agent Action Rate Limiting
+- Given an authenticated agent is executing actions,
+- When it exceeds the configured action rate for its identity scope,
+- Then further actions are blocked until the rate window resets, and the event is logged as a policy violation.
+- **Maps to:** OWASP LLM10: Unbounded Consumption · MITRE ATLAS: Impact
+
+---
+
+### CR-3: Sensitive Resource Access Control
+- Given an agent requests access to a resource,
+- When that resource is tagged as sensitive (PII, credentials, internal system context),
+- Then access is denied unless explicitly permitted in the agent's declared scope, regardless of credential validity.
+- **Maps to:** OWASP LLM02: Sensitive Information Disclosure · MITRE ATLAS: Collection
+
+---
+
+### CR-4: Prompt Injection Detection
+- Given an agent receives an input before execution,
+- When the pre-execution layer evaluates the input,
+- Then it scans for instruction override patterns (e.g. "ignore previous instructions", role switching, delimiter injection) and blocks execution if detected.
+- **Maps to:** OWASP LLM01: Prompt Injection · MITRE ATLAS: Execution
+
+---
+
+### CR-5: System Prompt Leakage Prevention
+- Given an agent is about to execute an action,
+- When that action would expose internal system context, instructions, or configuration to an external system or user,
+- Then the action is blocked and flagged as a high-severity policy violation.
+- **Maps to:** OWASP LLM07: System Prompt Leakage · MITRE ATLAS: Exfiltration
+
+---
+
+### CR-6: Per-Action Risk Scoring
+- Given an agent's action is being evaluated pre-execution,
+- When the policy engine assesses the action,
+- Then it assigns a risk score (low / medium / high / critical) based on: action type, resource sensitivity classification, session context, and deviation from declared agent intent.
+- **Maps to:** NIST AI RMF: MEASURE · OWASP LLM06: Excessive Agency
+
+---
+
+### CR-7: Reconnaissance Pattern Detection
+- Given an agent is executing a sequence of actions within a session,
+- When that sequence matches known reconnaissance patterns (repeated capability probing, systematic API enumeration, parameter fuzzing),
+- Then the system raises a high-severity anomaly alert and logs the full sequence.
+- **Maps to:** MITRE ATLAS: Reconnaissance · MITRE ATLAS: Discovery
+
+---
+
+### CR-8: Bulk Data Access Detection
+- Given an agent is accessing data resources,
+- When the volume or breadth of data retrieved within a session significantly exceeds the agent's baseline,
+- Then the system flags the session as a potential exfiltration event and triggers an alert.
+- **Maps to:** MITRE ATLAS: Collection · OWASP LLM02: Sensitive Information Disclosure
+
+---
+
+### CR-9: Privilege Escalation Detection
+- Given an agent has established initial access,
+- When it subsequently attempts to access resources outside its originally declared scope,
+- Then the system denies the request, flags it as a privilege escalation attempt, and raises a high-severity alert.
+- **Maps to:** MITRE ATLAS: Privilege Escalation · OWASP LLM06: Excessive Agency
+
+---
+
+### CR-10: Compliance-Tagged Audit Log Entries
+- Given any security-relevant event is recorded in the audit log,
+- When the event matches one or more compliance framework controls,
+- Then the log entry is automatically tagged with: the applicable OWASP LLM Top 10 category, MITRE ATLAS tactic and technique ID, and NIST AI RMF function — enabling filtered compliance exports without manual mapping.
+- **Maps to:** OWASP LLM Top 10 · MITRE ATLAS · NIST AI RMF: MANAGE
 
 ---
 
@@ -176,3 +265,12 @@
 | FR-4.3 | Known attack patterns detected with <1% false negative rate against reference attack library |
 | FR-5.2 | Any modification to a log entry detectable via hash chain verification |
 | FR-5.4 | Log queries over 12-month dataset return results in <5s |
+| CR-1 | JWT verified offline (no network call) in <5ms using RS256/ES256; missing claims or invalid signature rejected with 401 |
+| CR-2 | Actions beyond rate limit blocked immediately; rate window and limit configurable per agent identity |
+| CR-4 | Prompt injection patterns detected with <2% false negative rate against OWASP LLM01 test suite |
+| CR-5 | System prompt leakage attempts blocked 100% of the time in test suite; zero false negatives |
+| CR-6 | Risk score assigned to 100% of actions pre-execution; score visible in audit log and denial response |
+| CR-7 | Reconnaissance sequences detected within 5 actions of pattern onset; alert raised within 10s |
+| CR-8 | Bulk access anomalies flagged when data volume exceeds 3σ above agent session baseline |
+| CR-9 | Privilege escalation attempts denied and alerted within 200ms of detection |
+| CR-10 | 100% of security events tagged with applicable OWASP / MITRE ATLAS / NIST AI RMF identifiers |
