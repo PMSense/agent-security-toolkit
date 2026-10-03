@@ -15,10 +15,20 @@
 ## ADR-002: Policy Engine — Simple Config for v1, OPA/Rego for v2
 
 - **Date:** 2026-09-21
-- **Status:** Accepted
+- **Status:** Superseded by ADR-006
 - **Context:** The policy engine needs to evaluate agent actions against access control rules. Two options were evaluated: OPA/Rego (expressive, industry-standard, but +1.5-2 weeks delay, steep learning curve, operational overhead) and a simple YAML/JSON config format (low barrier, fast to ship, sufficient for 80% of use cases). A layered approach (config compiling to Rego) is the long-term target but adds +3-4 weeks to v1.
 - **Decision:** Ship v1 with a **simple YAML/JSON config format**. Design the schema to map cleanly to Rego from the start so the v2 transpiler (config → Rego) doesn't require breaking changes. OPA/Rego becomes the advanced layer in v2.
-- **Consequences:** Faster v1 launch. Enterprises needing complex conditional policies (multi-attribute, composable rules) must wait for v2. Config schema design is critical — poor schema design in v1 will make the v2 OPA upgrade harder.
+- **Consequences:** Superseded — Cedar (ADR-006) eliminates the YAML → OPA migration path entirely.
+
+---
+
+## ADR-006: Policy Engine — Cedar
+
+- **Date:** 2026-10-03
+- **Status:** Accepted (supersedes ADR-002)
+- **Context:** ADR-002 chose simple YAML/JSON config for v1 with a planned OPA/Rego migration in v2 via a transpiler. This required maintaining two engines and a complex migration path. Cedar was evaluated as an alternative: it is purpose-built for authorization decisions, uses the PARC model (Principal, Action, Resource, Context) that maps directly to agent governance, is formally verified (policies are mathematically provable), type-safe, fast (<5ms evaluation), and open source (Apache 2.0). Cedar is the engine behind Amazon Verified Permissions. It is more expressive than YAML but simpler to write than Rego.
+- **Decision:** Use **Cedar** as the policy engine from v1. Policies are written in Cedar's native language. The SDK calls Cedar's evaluation engine with `(principal, action, resource, context)` tuples. The YAML/JSON config path and OPA/Rego migration are dropped entirely.
+- **Consequences:** Single policy engine for the lifetime of the product — no v2 migration. Cedar has a learning curve (small compared to Rego). Enterprises on AWS can use Amazon Verified Permissions as a managed Cedar policy store. Cedar's formal verification is a differentiator for a security-critical system. Python SDK uses the `cedar-policy` PyPI package.
 
 ---
 

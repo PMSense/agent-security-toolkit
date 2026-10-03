@@ -81,7 +81,7 @@ This creates four specific gaps:
   **v2 backlog:** AutoGen, Claude SDK, CrewAI (in that order — AutoGen has strong Microsoft/enterprise backing; Claude SDK is growing with Anthropic enterprise adoption; CrewAI has smaller enterprise footprint today).
 
 - [x] **Should access control be policy-as-code (e.g. OPA/Rego) or a simpler config file format?**
-  **Decision:** Ship v1 with a **simple YAML/JSON config format**. Design the schema to map cleanly to Rego so a transpiler (config → Rego) can be added in v2 without breaking existing policies. OPA/Rego becomes the advanced policy layer in v2 once the schema is proven in production.
+  **Decision (updated):** Use **Cedar** as the policy engine from v1. Cedar is purpose-built for authorization decisions, uses the PARC model (Principal, Action, Resource, Context) that maps directly to agent governance, is formally verified, type-safe, and simpler to write than OPA/Rego. Eliminates the YAML → OPA migration path from the original decision. See ADR-006.
 - [x] **What is the recommended form factor — CLI, Python SDK, or both?**
   **Decision:** Ship v1 with a **Python SDK** as the core (required for runtime authorization, pre-execution policy enforcement, and behavioral monitoring). Follow with a **CLI** as a thin wrapper over the same library for policy management, audit querying, and CI/CD integration. The CLI is ~1 additional week of effort and serves security engineers and DevSecOps who won't embed Python.
 - [x] **Are there compliance frameworks (SOC2, OWASP LLM Top 10) we should explicitly map findings to?**

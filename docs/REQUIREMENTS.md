@@ -66,12 +66,12 @@
 **FR-3.1 — Policy Definition**
 - Given a security or platform team,
 - When they define agent behavior policies,
-- Then the system provides a policy language or config format to express rules such as: allowed actions, forbidden resource patterns, rate limits, required approvals, and risk thresholds.
+- Then the system provides a **Cedar**-based policy language to express rules using the PARC model (Principal = agent identity, Action = tool call / API request, Resource = data / service / system, Context = session state, time, risk score) — supporting conditions such as: allowed actions, forbidden resource patterns, rate limits, required approvals, and risk thresholds.
 
 **FR-3.2 — Intent Evaluation**
 - Given an agent is about to execute an action,
 - When the pre-execution control layer evaluates the action,
-- Then it assesses the action against defined policies and assigns a risk score before execution proceeds.
+- Then it submits a Cedar authorization request `(principal, action, resource, context)` to the policy engine, receives an `Allow` or `Deny` decision in <50ms, and assigns a risk score before execution proceeds.
 
 **FR-3.3 — Action Blocking**
 - Given an agent's intended action violates policy or exceeds the risk threshold,
@@ -245,7 +245,7 @@
 | NFR-6 | Interoperability | Must integrate with OIDC, SAML 2.0, AWS IAM, Azure AD, GCP Workload Identity, and HashiCorp Vault |
 | NFR-7 | Auditability | Audit logs must be retained for a minimum of 12 months with tamper evidence intact |
 | NFR-8 | Usability | A basic scan/integration must be achievable with a single command and zero custom config |
-| NFR-9 | Extensibility | Policy engine must support custom rules without modifying core system code |
+| NFR-9 | Extensibility | Policy engine (Cedar) must support custom rules and entity schemas without modifying core system code; new resource types and actions must be registerable via Cedar schema extensions |
 | NFR-10 | Observability | All system components must emit structured logs and metrics consumable by standard SIEM/monitoring tools |
 
 ---
