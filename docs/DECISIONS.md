@@ -62,6 +62,16 @@
 
 ---
 
+## ADR-007: Data Enforcement Action — Vaultless FPE Tokenization
+
+- **Date:** 2026-10-03
+- **Status:** Accepted
+- **Context:** FR-6.5 required a data enforcement action for sensitive content detected in agent outputs and inter-agent messages. Options evaluated: (1) classic redaction/masking — simple but breaks downstream systems that expect valid data formats; (2) traditional vault-based tokenization — referential integrity preserved but introduces vault infrastructure, scalability bottleneck, and a new attack surface; (3) vaultless Format-Preserving Encryption (FPE) using NIST FF1/FF3-1 — no vault required, tokens are same format/length as originals, deterministic (same input + key = same token), reversible by authorized systems, key managed via existing secrets manager.
+- **Decision:** **Vaultless FPE tokenization** (FF1/FF3-1) as the primary enforcement action for structured sensitive data (PII, credentials, card numbers, SSNs, emails, phone numbers, dates, API keys). Encryption key stored in secrets manager (HashiCorp Vault, AWS KMS, or GCP KMS). Pattern-based masking and full suppression are fallbacks for unstructured free text where FPE is not applicable. v1 covers structured data types; NER-based detection for free text spans is v2.
+- **Consequences:** Agents and downstream systems process tokens that look like real data — no breakage. Exfiltrated tokens are useless without the encryption key. Key rotation requires re-tokenization (handled in v2). Referential integrity maintained across joins/lookups via deterministic token generation. Key management becomes the critical security dependency — must be integrated with a secrets manager from day one.
+
+---
+
 ## Template
 ### ADR-XXX: [Decision Title]
 - **Date:** YYYY-MM-DD

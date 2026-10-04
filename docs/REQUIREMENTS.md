@@ -3,7 +3,7 @@
 > Status: DRAFT
 > Phase: BA
 > Input: docs/PRD.md
-> Last updated: 2026-09-27
+> Last updated: 2026-10-03
 
 ---
 
@@ -148,6 +148,92 @@
 
 ---
 
+### FR-6: Data Exfiltration Prevention and DLP
+
+**FR-6.1 — Input Content Inspection**
+- Given a user uploads a document, pastes content, or shares data with an agent,
+- When the data enters the agent interaction,
+- Then the system scans the input for sensitive content (PII, credentials, confidential classification markers) and flags or blocks it according to the configured ingress policy before the agent processes it.
+
+**FR-6.2 — Output Content Inspection**
+- Given an agent is about to produce an output (API response, message, file write, external API call),
+- When the output is evaluated pre-transmission,
+- Then the system scans the content for sensitive data patterns and applies the configured egress policy: allow, redact, or block before the output leaves the system boundary.
+
+**FR-6.3 — Egress Policy Enforcement**
+- Given a security team has defined data egress policies in Cedar,
+- When an agent attempts to transmit data to an external system, another agent, or an end user,
+- Then the Cedar policy engine evaluates the transmission against declared rules — specifying what data classifications can go to which destinations — and blocks or redacts the transmission if it violates policy.
+
+**FR-6.4 — Sensitive Data Classification**
+- Given a resource or data object is registered in the system,
+- When it is tagged with a sensitivity classification (e.g. PII, credentials, confidential, internal),
+- Then all downstream authorization decisions, egress policy evaluations, and audit log entries reference that classification — ensuring consistent enforcement across the system.
+
+**FR-6.5 — Vaultless Tokenization as the Primary Enforcement Action**
+- Given an agent output or inter-agent message contains sensitive data,
+- When the egress policy enforcement layer processes the content,
+- Then the system applies **Format-Preserving Encryption (FPE)** using NIST FF1/FF3-1 to tokenize sensitive values — producing tokens that are the same format and length as the original (e.g. a credit card number tokenizes to a different but valid-looking card number) — so downstream systems and agents continue to function without receiving real sensitive data.
+- The encryption key is retrieved from a configured secrets manager (HashiCorp Vault, AWS KMS, or GCP KMS) — never stored in code or config.
+- The same input + key always produces the same token, preserving referential integrity across joins and lookups.
+- If FPE tokenization is not applicable for a given data type (e.g. unstructured free text), the system falls back to **pattern-based masking** (replace with `[TYPE]` placeholder) or **full suppression** (remove the sensitive span entirely), depending on policy configuration.
+- All tokenization, masking, and suppression events are recorded in the audit log with: data type detected, enforcement action applied, destination, and session ID — but never the original sensitive value.
+
+**FR-6.6 — Agent-to-Agent Propagation Controls**
+- Given an agent receives sensitive data in one interaction,
+- When it attempts to pass that data to another agent, tool, or downstream system,
+- Then the system evaluates the propagation against the egress policy for the originating data classification and blocks transmission to any destination not explicitly permitted.
+
+---
+
+### FR-7: Policy Versioning and Rollback
+
+**FR-7.1 — Immutable Policy Versions**
+- Given a security or platform team modifies a Cedar policy,
+- When the change is saved,
+- Then the system creates a new immutable policy version with: version number, full policy diff, author identity, timestamp, and change reason — and the prior version remains intact and queryable.
+
+**FR-7.2 — Policy Change Audit Log**
+- Given any Cedar policy is created, modified, or deleted,
+- When the change occurs,
+- Then it is recorded in the audit log with the same tamper-evident guarantees as agent action logs — including author identity, before/after state, and timestamp.
+
+**FR-7.3 — Policy Rollback**
+- Given a policy change causes unintended behavior or a security incident,
+- When an administrator initiates a rollback,
+- Then the system restores the selected prior policy version as the active version within 5 seconds, and records the rollback event in the audit log.
+
+**FR-7.4 — Policy Version History Query**
+- Given an administrator or auditor,
+- When they query the policy version history,
+- Then they can view the full chronological history of changes for any policy, diff any two versions, and identify who made each change and when.
+
+---
+
+### FR-8: Incident Response Integration
+
+**FR-8.1 — Configurable Alert Delivery**
+- Given an anomaly, policy violation, or high-severity security event is detected,
+- When the alert is triggered,
+- Then the system delivers the alert to one or more configured destinations: webhook (universal), Splunk HEC, PagerDuty Events API, or Slack — based on the organization's incident response configuration.
+
+**FR-8.2 — Structured Alert Payload**
+- Given an alert is delivered to any destination,
+- When it is transmitted,
+- Then the payload includes: severity, event type, agent identity, action, resource, policy matched or anomaly description, session ID, timestamp, and a deep link to the audit log entry.
+
+**FR-8.3 — SIEM Integration via CEF/LEEF**
+- Given an organization uses a SIEM platform (Splunk, QRadar, ArcSight),
+- When security events are forwarded,
+- Then the system emits events in Common Event Format (CEF) and Log Event Extended Format (LEEF) compatible with standard SIEM ingestion pipelines.
+
+**FR-8.4 — Alert Routing Rules**
+- Given different event types require different response teams,
+- When an alert is generated,
+- Then routing rules determine which destination receives it based on: severity, event type, agent identity, and affected resource — so high-severity events reach on-call responders and low-severity events go to a monitoring queue.
+
+---
+
 ## Compliance Requirements
 
 > Technically feasible controls derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF.
@@ -247,6 +333,8 @@
 | NFR-8 | Usability | A basic scan/integration must be achievable with a single command and zero custom config |
 | NFR-9 | Extensibility | Policy engine (Cedar) must support custom rules and entity schemas without modifying core system code; new resource types and actions must be registerable via Cedar schema extensions |
 | NFR-10 | Observability | All system components must emit structured logs and metrics consumable by standard SIEM/monitoring tools |
+| NFR-11 | Resilience | When the authorization or policy service is unavailable, the system must **fail closed** by default — all agent actions are denied until service recovers; an explicit **audit-only mode** is configurable per deployment for production-critical workloads where operators accept the availability-over-security tradeoff |
+| NFR-12 | Tenant Isolation | All agent identities, Cedar policies, audit logs, behavioral baselines, and FPE keys must be scoped to a single tenant; no cross-tenant data access is permitted at any layer; v1 is single-tenant (self-hosted), but the data model must support tenant partitioning from day one to enable v2 multi-tenant SaaS without a schema rewrite |
 
 ---
 
@@ -274,3 +362,14 @@
 | CR-8 | Bulk access anomalies flagged when data volume exceeds 3σ above agent session baseline |
 | CR-9 | Privilege escalation attempts denied and alerted within 200ms of detection |
 | CR-10 | 100% of security events tagged with applicable OWASP / MITRE ATLAS / NIST AI RMF identifiers |
+| FR-6.1 | PII and credential patterns detected in agent inputs with >95% accuracy; flagged inputs blocked or held within 100ms |
+| FR-6.2 | Sensitive content in agent outputs detected before transmission; redaction or block applied before data crosses system boundary |
+| FR-6.3 | 100% of agent data transmissions evaluated against Cedar egress policy; zero transmissions bypass policy evaluation |
+| FR-6.5 | FPE tokens are format-identical to original values; no original sensitive value appears in output; tokenization completes in <10ms per value; all enforcement events logged |
+| FR-6.6 | Agent-to-agent data propagation blocked for any destination not in the originating data classification's permitted list |
+| FR-7.1 | Every policy save creates a new version with full diff and author identity; prior versions remain intact and queryable |
+| FR-7.3 | Policy rollback completes within 5s; rollback event recorded in audit log with author and restored version number |
+| FR-8.1 | Alerts delivered to all configured destinations within 30s of event detection |
+| FR-8.3 | CEF/LEEF output validated against Splunk and QRadar ingestion requirements |
+| NFR-11 | Service unavailability triggers fail-closed within 500ms; all denied actions logged; audit-only mode toggled via config without restart |
+| NFR-12 | Zero cross-tenant data leakage in isolation test suite; tenant partitioning verified at identity, policy, audit log, and key layers |

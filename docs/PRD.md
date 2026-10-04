@@ -2,7 +2,7 @@
 
 > Status: DRAFT
 > Phase: PM
-> Last updated: 2026-09-27
+> Last updated: 2026-10-03
 
 ---
 
@@ -12,12 +12,13 @@ Autonomous agents and Non-Human Identities (NHIs) — including AI agents, bots,
 
 The core problem: **there is no standard system that governs how autonomous agents and NHIs authenticate, access enterprise systems and data, and execute actions** — with the controls, visibility, and accountability that enterprises require.
 
-This creates four specific gaps:
+This creates five specific gaps:
 
 1. **No runtime authorization** — Agents operate with static, pre-granted permissions rather than dynamic, context-aware authorization at the moment of action.
 2. **No pre-execution policy controls** — There is no enforcement layer that evaluates whether an agent *should* take an action before it executes, based on policy, context, and risk.
 3. **No behavioral anomaly detection** — Deviations from expected agent behavior (unusual access patterns, unexpected tool calls, privilege escalation) go undetected until damage is done.
 4. **No tamper-evident auditability** — Agent actions are either unlogged or logged in ways that can be altered, making forensic investigation and compliance reporting unreliable.
+5. **No data egress controls or DLP for agent interactions** — AI-driven agents operate with access to enterprise systems and data, and users are actively uploading and sharing sensitive information with these capabilities. Once data enters an agent interaction — whether accessed by the agent directly or provided by a user — there are no enforced controls over where it goes next. An agent with legitimate read access to customer records can still exfiltrate that data by embedding it in an API call, passing it to another agent, or including it in a response. Users sharing confidential documents with an agent have no guardrails preventing that content from being propagated beyond approved system boundaries. There is no inspection layer that examines what data is leaving the enterprise — whether through deliberate agent action, inadvertent inclusion in outputs, or user-initiated disclosure — making unauthorized data loss undetectable until after the fact.
 
 ---
 
@@ -40,6 +41,7 @@ This creates four specific gaps:
 4. **Detect behavioral anomalies** — Continuously monitor agent behavior and surface deviations that indicate compromise, misconfiguration, or misuse.
 5. **Guarantee tamper-evident auditability** — Produce cryptographically verifiable, immutable logs of every agent action for forensics, compliance, and accountability.
 6. **Map to industry compliance frameworks** — Tag findings and audit exports against OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF so enterprises can demonstrate governance posture without manual mapping.
+7. **Prevent data exfiltration and enforce data loss prevention** — Inspect data entering and leaving agent interactions, enforce egress policies over what data can cross system boundaries, and redact or block sensitive content before it is propagated beyond approved scope.
 
 ---
 
@@ -54,6 +56,15 @@ This creates four specific gaps:
 - Integration with enterprise identity systems (IAM, OIDC, SAML, secrets managers)
 - Support for **LangChain** and **OpenAI Agents SDK** (v1); AutoGen, Claude SDK, CrewAI via adapter pattern in v2
 - Compliance mapping to OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF
+- Data egress controls — input and output content inspection for sensitive data (PII, credentials, confidential IP)
+- Egress policy enforcement via Cedar — define what data can leave, to which destinations, in what form
+- Sensitive data classification tagging on resources and agent-produced outputs
+- Vaultless Format-Preserving Encryption (FPE/FF1/FF3-1) tokenization — tokens are same format and length as original values; key managed via secrets manager; pattern-based masking and suppression as fallback for unstructured text
+- Agent-to-agent data propagation controls — prevent sensitive data received in one agent interaction from being passed to unauthorized agents or systems
+- Fail-safe behavior — fail closed by default when the governance service is unavailable; configurable audit-only mode for production-critical workloads
+- Policy versioning and rollback — immutable Cedar policy version history with diff, author, timestamp, and one-click rollback
+- Incident response integration — configurable alert delivery to webhook, Splunk HEC, PagerDuty, Slack, and generic SIEM (CEF/LEEF)
+- Single-tenant (self-hosted) for v1; multi-tenant SaaS isolation architecture designed into the data model from day one for v2 enterprise tier
 
 ### Out of Scope
 - Building or hosting AI agents (this governs agents, it does not build them)
@@ -71,6 +82,7 @@ This creates four specific gaps:
 | CI integration | Integrates with GitHub Actions, GitLab CI in <30 min |
 | Audit coverage | Generates complete audit trail for every agent action scanned |
 | Community traction | 500+ GitHub stars within 6 months of launch |
+| Data loss prevention | >95% detection rate for PII and credential patterns in agent inputs and outputs |
 
 ---
 
@@ -88,3 +100,20 @@ This creates four specific gaps:
   **Decision:** Map v1 findings and audit exports to **OWASP LLM Top 10**, **MITRE ATLAS**, and **NIST AI RMF** — the three most technically relevant frameworks for this system. SOC 2 and ISO 27001 are deferred to the enterprise tier (v2). 10 specific technical controls (CR-1 through CR-10) derived from these frameworks have been added to REQUIREMENTS.md.
 - [x] **What is the licensing model — open source, commercial, or dual?**
   **Decision:** **Dual licensing (Open Core).** Core SDK and CLI are open source (Apache 2.0) — free to use, self-host, and contribute to. Enterprise tier is commercial — adds managed hosting, centralized audit logging with compliance export, advanced policy controls, all framework adapters, and SLA-backed support. Open core drives developer adoption and creates the top-of-funnel pipeline for enterprise deals.
+
+---
+
+## Future Deliverables
+
+Items identified during requirements review that are out of v1 scope but must be addressed in future releases.
+
+| # | Item | Target | Notes |
+|---|---|---|---|
+| FD-1 | FPE key scoping (per-classification, per-tenant, per-agent) | v2 | Key granularity affects blast radius of a compromised key; v1 uses a single key per deployment |
+| FD-2 | SDK total latency overhead NFR | v2 | Define max acceptable end-to-end latency tax the SDK adds to agent execution; blocked on real-world v1 benchmarks |
+| FD-3 | Agent versioning — re-registration, baseline reset, history preservation on agent update | v2 | Requires agent lifecycle management design; v1 treats each registration as independent |
+| FD-4 | Human-in-the-loop alert delivery channels (email, Slack, PagerDuty, webhook) | v1.1 | FR-3.4 currently specifies alerting without delivery mechanism; configurable channels needed before enterprise adoption |
+| FD-5 | Multi-tenant SaaS isolation (per-tenant keys, data partitioning, tenant admin) | v2 enterprise | Data model designed for tenant isolation in v1 but full SaaS multi-tenancy ships with enterprise tier |
+| FD-6 | FPE key rotation with re-tokenization | v2 | Key rotation invalidates existing tokens without re-tokenization; requires coordinated migration tooling |
+| FD-7 | NER-based detection for free text tokenization | v2 | v1 covers structured data types only; unstructured free text requires Named Entity Recognition |
+| FD-8 | SOC 2 Type II and ISO 27001 compliance mapping | v2 enterprise | Deferred from compliance framework decision; required for enterprise procurement |
