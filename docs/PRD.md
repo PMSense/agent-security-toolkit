@@ -42,6 +42,7 @@ This creates five specific gaps:
 5. **Guarantee tamper-evident auditability** — Produce cryptographically verifiable, immutable logs of every agent action for forensics, compliance, and accountability.
 6. **Map to industry compliance frameworks** — Tag findings and audit exports against OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF so enterprises can demonstrate governance posture without manual mapping.
 7. **Prevent data exfiltration and enforce data loss prevention** — Inspect data entering and leaving agent interactions, enforce egress policies over what data can cross system boundaries, and redact or block sensitive content before it is propagated beyond approved scope.
+8. **Monitor and control agents in real time** — Provide live visibility into active agent sessions and a graduated kill switch so operators can throttle, suspend, or immediately terminate agents exhibiting bad behavior — with full state audit and safe recovery.
 
 ---
 
@@ -65,6 +66,11 @@ This creates five specific gaps:
 - Policy versioning and rollback — immutable Cedar policy version history with diff, author, timestamp, and one-click rollback
 - Incident response integration — configurable alert delivery to webhook, Splunk HEC, PagerDuty, Slack, and generic SIEM (CEF/LEEF)
 - Single-tenant (self-hosted) for v1; multi-tenant SaaS isolation architecture designed into the data model from day one for v2 enterprise tier
+- Real-time agent session monitoring — live view of active sessions, current actions, running risk scores, and anomaly flags
+- Manual kill switch — operator-initiated immediate stop at instance, agent-type, session/pipeline, or tenant-wide scope
+- In-flight action termination — abort currently executing actions, not just block future ones
+- Graduated enforcement — throttle → warn → suspend → terminate, configurable per agent and per policy
+- Post-kill recovery workflow — audit of aborted state, cleanup, and explicit re-authorization before agent resumes
 
 ### Out of Scope
 - Building or hosting AI agents (this governs agents, it does not build them)

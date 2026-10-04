@@ -3,7 +3,7 @@
 > Status: DRAFT
 > Phase: BA
 > Input: docs/PRD.md
-> Last updated: 2026-10-03
+> Last updated: 2026-10-03 (rev 2)
 
 ---
 
@@ -234,6 +234,39 @@
 
 ---
 
+### FR-9: Agent Monitoring and Kill Switch
+
+**FR-9.1 — Real-Time Session Monitoring**
+- Given one or more agents are actively executing,
+- When an operator opens the monitoring view,
+- Then they see a live dashboard of all active sessions updated in near real-time, showing: agent identity, current action, session duration, resources being accessed, running risk score, and any active anomaly flags.
+
+**FR-9.2 — Manual Kill Switch**
+- Given an operator determines an agent must be stopped,
+- When they issue a kill command,
+- Then the system immediately stops the targeted scope — selectable as: a specific agent instance, all instances of an agent type, all agents within a session or pipeline, or a tenant-wide emergency stop — independent of whether an anomaly was detected.
+
+**FR-9.3 — In-Flight Action Termination**
+- Given a kill command is issued while an agent action is currently executing,
+- When the termination signal is sent,
+- Then the system aborts the in-flight action, rolls back its effects where possible, records the incomplete state and abort reason in the audit log, and prevents the agent from initiating any further actions.
+
+**FR-9.4 — Graduated Enforcement**
+- Given an agent's behavior or risk score warrants intervention,
+- When an enforcement action is triggered (manually or automatically),
+- Then the system applies one of four graduated levels — configurable per agent identity and per Cedar policy:
+  - **Throttle** — rate-limit the agent's actions without stopping execution; alert operators
+  - **Warn** — flag the session and alert operators; agent continues unrestricted
+  - **Suspend** — block all new actions and hold the session state; agent cannot proceed until a human releases the suspension
+  - **Terminate** — full stop; abort in-flight actions, invalidate credentials, clean up session state
+
+**FR-9.5 — Post-Kill Recovery**
+- Given an agent has been suspended or terminated,
+- When an operator initiates recovery,
+- Then the system presents a structured recovery workflow: a summary of what the agent did, what actions were aborted, what state was left behind, and any resources that may require remediation — followed by an explicit re-authorization step that must be completed before the agent can resume execution.
+
+---
+
 ## Compliance Requirements
 
 > Technically feasible controls derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF.
@@ -373,3 +406,8 @@
 | FR-8.3 | CEF/LEEF output validated against Splunk and QRadar ingestion requirements |
 | NFR-11 | Service unavailability triggers fail-closed within 500ms; all denied actions logged; audit-only mode toggled via config without restart |
 | NFR-12 | Zero cross-tenant data leakage in isolation test suite; tenant partitioning verified at identity, policy, audit log, and key layers |
+| FR-9.1 | Live session dashboard refreshes within 2s of any state change; all active sessions visible with no polling required by operator |
+| FR-9.2 | Kill command executed within 500ms of operator action; all targeted agents stopped regardless of current execution state |
+| FR-9.3 | In-flight actions aborted within 1s of kill signal; incomplete state and abort reason recorded in audit log |
+| FR-9.4 | All four enforcement levels (throttle/warn/suspend/terminate) configurable per agent identity and per Cedar policy; transitions between levels logged |
+| FR-9.5 | Recovery workflow presented within 5s of operator initiating recovery; re-authorization required before agent resumes; no agent restarts without explicit human approval |
