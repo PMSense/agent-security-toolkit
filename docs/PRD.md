@@ -2,7 +2,7 @@
 
 > Status: DRAFT
 > Phase: PM
-> Last updated: 2026-10-03
+> Last updated: 2026-10-04
 
 ---
 
@@ -43,6 +43,7 @@ This creates five specific gaps:
 6. **Map to industry compliance frameworks** — Tag findings and audit exports against OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF so enterprises can demonstrate governance posture without manual mapping.
 7. **Prevent data exfiltration and enforce data loss prevention** — Inspect data entering and leaving agent interactions, enforce egress policies over what data can cross system boundaries, and redact or block sensitive content before it is propagated beyond approved scope.
 8. **Monitor and control agents in real time** — Provide live visibility into active agent sessions and a graduated kill switch so operators can throttle, suspend, or immediately terminate agents exhibiting bad behavior — with full state audit and safe recovery.
+9. **Protect the governance system itself** — Enforce strict separation between the management plane (human operators) and the data plane (agents), ensuring no agent credential can ever modify policies, baselines, system configuration, or the kill switch — and that the governance system cannot be weaponized or circumvented by the agents it governs.
 
 ---
 
@@ -67,6 +68,7 @@ This creates five specific gaps:
 - Incident response integration — configurable alert delivery to webhook, Splunk HEC, PagerDuty, Slack, and generic SIEM (CEF/LEEF)
 - Single-tenant (self-hosted) for v1; multi-tenant SaaS isolation architecture designed into the data model from day one for v2 enterprise tier
 - Real-time agent session monitoring — live view of active sessions, current actions, running risk scores, and anomaly flags
+- System self-protection — strict management/data plane separation; agent credentials grant zero access to policy management, identity admin, system configuration, baselines, or kill switch settings; governance API rate limiting and abuse prevention; prompt injection defense for governance endpoints
 - Manual kill switch — operator-initiated immediate stop at instance, agent-type, session/pipeline, or tenant-wide scope
 - In-flight action termination — abort currently executing actions, not just block future ones
 - Graduated enforcement — throttle → warn → suspend → terminate, configurable per agent and per policy

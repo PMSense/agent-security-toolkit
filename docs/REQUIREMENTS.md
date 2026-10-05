@@ -3,7 +3,7 @@
 > Status: DRAFT
 > Phase: BA
 > Input: docs/PRD.md
-> Last updated: 2026-10-03 (rev 2)
+> Last updated: 2026-10-04
 
 ---
 
@@ -267,6 +267,40 @@
 
 ---
 
+### FR-10: System Self-Protection and Integrity
+
+**FR-10.1 — Management / Data Plane Separation**
+- Given an agent holds a valid JWT credential,
+- When it attempts to call any management plane endpoint (policy management, identity administration, system configuration, audit log access, baseline management, kill switch configuration),
+- Then the request is denied with a 403, the attempt is logged as a critical security event, and a high-severity alert is raised — the agent JWT grants access to data plane APIs only.
+
+**FR-10.2 — Policy Write Protection**
+- Given any request to create, modify, or delete a Cedar policy,
+- When the request is received,
+- Then the system accepts it only from an authenticated human identity via the management plane with MFA verified; any attempt originating from an agent credential is denied, logged, and alerted regardless of the agent's declared scope or permissions.
+
+**FR-10.3 — Behavioral Baseline Integrity**
+- Given an agent is generating behavioral data,
+- When that data is used to compute or update the agent's behavioral baseline,
+- Then the baseline is computed entirely by the system's internal engine from observed actions; no agent-provided input, API call, or external data source can directly modify, reset, or delete a baseline — the baseline store is write-protected from all agent credentials.
+
+**FR-10.4 — System Configuration Immutability**
+- Given any request to modify system-wide configuration (enforcement thresholds, anomaly detection rules, FPE encryption keys, kill switch settings, monitoring parameters, rate limit values),
+- When the request arrives,
+- Then it is accepted only from an authenticated human identity via the management plane; automated processes and agent credentials are denied unconditionally, and all configuration change attempts are logged in the tamper-evident audit trail.
+
+**FR-10.5 — Governance API Rate Limiting and Abuse Prevention**
+- Given an agent is making requests to the authorization or policy evaluation API,
+- When the request rate from that agent's identity exceeds a configurable threshold,
+- Then the system automatically throttles the agent, logs the abuse pattern as a high-severity anomaly, and alerts operators — preventing a compromised agent from flooding the governance service to force fail-open behavior or exhaust system resources.
+
+**FR-10.6 — Prompt Injection Defense for Governance Endpoints**
+- Given an agent's input or output contains instructions targeting governance management endpoints (e.g. injected instructions to call policy APIs, modify configurations, or disable monitoring),
+- When the pre-execution inspection layer evaluates the content,
+- Then the injected instructions are detected, the action is blocked, the event is logged as a critical security violation, and the agent session is escalated for human review.
+
+---
+
 ## Compliance Requirements
 
 > Technically feasible controls derived from OWASP LLM Top 10, MITRE ATLAS, and NIST AI RMF.
@@ -360,7 +394,7 @@
 | NFR-2 | Scalability | Must support concurrent authorization of 1,000+ agents without degradation |
 | NFR-3 | Availability | Authorization and policy enforcement services must target 99.9% uptime |
 | NFR-4 | Security | All credentials issued by the system must use industry-standard cryptography (RS256, ES256) |
-| NFR-5 | Security | The system itself must not be a single point of compromise — agent credentials must be scoped and isolated |
+| NFR-5 | Security | The governance system must enforce strict separation between the management plane (human operators, MFA-authenticated) and the data plane (agent JWTs); agent credentials grant zero access to management plane APIs at any privilege level; management and data plane services must run as separate processes with independent authentication middleware so a data plane compromise cannot propagate to the management plane |
 | NFR-6 | Interoperability | Must integrate with OIDC, SAML 2.0, AWS IAM, Azure AD, GCP Workload Identity, and HashiCorp Vault |
 | NFR-7 | Auditability | Audit logs must be retained for a minimum of 12 months with tamper evidence intact |
 | NFR-8 | Usability | A basic scan/integration must be achievable with a single command and zero custom config |
@@ -411,3 +445,9 @@
 | FR-9.3 | In-flight actions aborted within 1s of kill signal; incomplete state and abort reason recorded in audit log |
 | FR-9.4 | All four enforcement levels (throttle/warn/suspend/terminate) configurable per agent identity and per Cedar policy; transitions between levels logged |
 | FR-9.5 | Recovery workflow presented within 5s of operator initiating recovery; re-authorization required before agent resumes; no agent restarts without explicit human approval |
+| FR-10.1 | 100% of agent JWT requests to management plane endpoints rejected with 403; zero false negatives in penetration test suite; all attempts logged as critical security events |
+| FR-10.2 | Policy write operations rejected for all agent credentials in 100% of test cases; MFA verification required for every management plane policy change |
+| FR-10.3 | No agent API call, payload, or injected instruction can produce a write to the baseline store; verified via dedicated attack simulation suite |
+| FR-10.4 | System configuration unchanged after any agent-initiated request sequence in attack simulation; all modification attempts logged |
+| FR-10.5 | Governance API abuse throttling activates within 3s of rate threshold breach; fail-closed maintained under sustained 10x normal load |
+| FR-10.6 | Injected governance endpoint instructions detected and blocked in 100% of test cases from OWASP LLM01 attack library targeting management APIs |
