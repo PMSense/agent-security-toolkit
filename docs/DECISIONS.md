@@ -72,6 +72,16 @@
 
 ---
 
+## ADR-008: Implementation Approach — SDK + Sidecar + APIs + Management API + CLI (v1); Gateway (v2)
+
+- **Date:** 2026-10-05
+- **Status:** Accepted
+- **Context:** Six implementation approaches were evaluated: Python SDK (embedded), Sidecar, Gateway/Reverse Proxy, Governance APIs (backend), CLI (binary), and Management API (separate service). Each serves different deployment models and capability needs. Runtime authorization, pre-execution policy, behavioral monitoring, and kill switch all require in-process or near-process integration — a gateway alone cannot cover these. The sidecar provides language-agnostic coverage for K8s/Docker without code changes. The gateway adds significant surface area for marginal v1 benefit since SDK + sidecar covers the majority of use cases.
+- **Decision:** Ship v1 with: **Python SDK** (embedded, local Cedar cache, primary developer interface) + **Sidecar** (K8s/Docker deployment mode, language-agnostic) + **Governance APIs** (gRPC + REST backend for auth, audit, monitoring, alerting, policy sync) + **Management API** (separate service, management plane, human + MFA only) + **CLI** (thin SDK wrapper, management/ops). **Gateway/Reverse Proxy** deferred to v2 enterprise tier. Cedar runs as a hybrid local cache in the SDK, synced from the central policy service via push updates — evaluation is in-process (<1ms), policy consistency is eventual with push sync.
+- **Consequences:** Developers must embed the Python SDK for full runtime governance; non-Python agents use the sidecar. Gateway-less v1 means enterprises needing network-edge enforcement without any code or container changes must wait for v2. Cedar hybrid cache requires a policy sync service and push mechanism from day one. Management/data plane separation requires two independently deployed services — higher infrastructure footprint than a monolith, but required for FR-10 system self-protection.
+
+---
+
 ## Template
 ### ADR-XXX: [Decision Title]
 - **Date:** YYYY-MM-DD

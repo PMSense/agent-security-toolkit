@@ -50,6 +50,15 @@ This creates five specific gaps:
 ## Scope
 
 ### In Scope
+
+**Implementation approach (v1):**
+- **Python SDK** — embedded library with local Cedar cache; primary interface for developers integrating governance into agents
+- **Sidecar** — language-agnostic deployment mode for K8s/Docker environments; intercepts agent traffic without code changes
+- **Governance APIs (gRPC + REST)** — backend services for authorization, audit logging, behavioral monitoring, alerting, and policy sync; called by SDK and sidecar
+- **Management API** — separate service for the management plane (policy CRUD, identity admin, system configuration); human + MFA authentication only; no agent credential access
+- **CLI** — thin wrapper over the SDK for policy management, audit querying, and CI/CD integration
+
+**Capabilities:**
 - Agent and NHI identity and authentication (short-lived credentials, identity federation, workload identity)
 - Runtime authorization engine (policy evaluation at point of action, not just at provisioning)
 - Pre-execution policy controls (intent analysis, risk scoring, action blocking / human-in-the-loop escalation)
@@ -125,3 +134,7 @@ Items identified during requirements review that are out of v1 scope but must be
 | FD-6 | FPE key rotation with re-tokenization | v2 | Key rotation invalidates existing tokens without re-tokenization; requires coordinated migration tooling |
 | FD-7 | NER-based detection for free text tokenization | v2 | v1 covers structured data types only; unstructured free text requires Named Entity Recognition |
 | FD-8 | SOC 2 Type II and ISO 27001 compliance mapping | v2 enterprise | Deferred from compliance framework decision; required for enterprise procurement |
+| FD-9 | Gateway / Reverse Proxy — network-level enforcement without code changes | v2 enterprise | Significant additional surface area; SDK + sidecar covers v1 use cases; enterprises needing network-edge enforcement or unable to modify agent code require this |
+| FD-10 | SDK language expansion — Go, TypeScript, Java | v2 | Python-only for v1 (matches primary agent developer audience); other languages required for broader enterprise adoption |
+| FD-11 | Synthetic data replacement for DLP (realistic fake data instead of tokens) | v2 | Complex generation layer; v1 covers FPE tokenization and masking |
+| FD-12 | eBPF-based behavioral monitoring — kernel-level syscall interception | v3 | Language-agnostic, very low overhead, Linux-only; high implementation complexity; v1/v2 use SDK and sidecar for behavioral event capture |
